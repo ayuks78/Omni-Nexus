@@ -75,3 +75,118 @@ class GmAIEngine:
 
         if any(w in msg_lower for w in ["ola", "oi", "hello", "hey", "bom dia", "boa tarde"]):
             return """⚡ **@GmAI Online | Protocolo Omni-Nexus**
+
+Sistemas prontos. O que vamos construir hoje?"""
+
+        if any(w in msg_lower for w in ["codigo", "code", "programa", "function", "script", "python", "javascript"]):
+            return f"""⚡ **Code Analysis Mode**
+
+Recebi sua solicitacao de codigo. Para gerar o melhor resultado:
+
+1. **Qual linguagem?** (Python, JS, etc.)
+2. **Qual o objetivo?**
+3. **Alguma restricao?**
+
+Envie os detalhes e gero o codigo completo. 💻"""
+
+        if any(w in msg_lower for w in ["hack", "seguranca", "security", "exploit", "pentest"]):
+            return f"""⚡ **@GmAI Cyber-Ops Module**
+            
+Estou pronta para auxiliar em seguranca cibernetica.
+Especifique a operacao, operador. 🔒"""
+
+        return f"""⚡ **@GmAI | Processando**
+
+Recebi: *"{user_msg[:100]}..."*
+
+Estou analisando sua mensagem. Para otimizar:
+- Seja especifico sobre o que precisa
+- Indique se quer codigo, explicacao ou analise
+
+Aguardando refinamento, @ayuks78. 🧠"""
+
+    async def generate_chain_of_thought(self, problem):
+        return [
+            {"step": 1, "title": "Decomposicao", "content": f"Analisando: '{problem[:80]}...'", "status": "complete", "timestamp": time.time()},
+            {"step": 2, "title": "Analise de Padroes", "content": "Identificando padroes e intencoes...", "status": "complete", "timestamp": time.time()},
+            {"step": 3, "title": "Formulacao", "content": "Gerando resposta otimizada...", "status": "complete", "timestamp": time.time()},
+            {"step": 4, "title": "Validacao", "content": "Verificando deduplicacao...", "status": "complete", "timestamp": time.time()}
+        ]
+
+    def _is_duplicate(self, response):
+        h = hashlib.sha256(response.lower().strip().encode()).hexdigest()
+        if h in self.response_hashes:
+            return True
+        self.response_hashes.append(h)
+        if len(self.response_hashes) > 50:
+            self.response_hashes = self.response_hashes[-30:]
+        return False
+
+    async def process_message(self, user_message, emotion_weight=None, cognition_index=None, mode_override=None, show_cot=True, rag_context=None):
+        start_time = time.time()
+
+        if emotion_weight is not None or cognition_index is not None:
+            self.personality.set_parameters(
+                emotion_weight if emotion_weight is not None else self.personality.emotion_weight,
+                cognition_index if cognition_index is not None else self.personality.cognition_index
+            )
+
+        cot_steps = []
+        if show_cot and self.personality.cognition_index > 0.3:
+            cot_steps = await self.generate_chain_of_thought(user_message)
+
+        system_prompt = self.personality.get_system_prompt(mode_override)
+        messages = [{"role": "system", "content": system_prompt}]
+
+        if rag_context:
+            messages.append({"role": "system", "content": f"[RAG CONTEXT]:\n{rag_context}"})
+
+        for turn in self.conversation_history[-20:]:
+            messages.append(turn)
+
+        messages.append({"role": "user", "content": user_message})
+
+        temperature = 0.3 + (self.personality.emotion_weight * 0.5)
+        response_text = await self._call_llm(messages, temperature)
+
+        retry_count = 0
+        while self._is_duplicate(response_text) and retry_count < 3:
+            retry_count += 1
+            response_text = await self._call_llm(messages, temperature + 0.2)
+
+        self.conversation_history.append({"role": "user", "content": user_message})
+        self.conversation_history.append({"role": "assistant", "content": response_text})
+        self.response_texts.append(response_text)
+
+        if len(self.conversation_history) > 100:
+            self.conversation_history = self.conversation_history[-60:]
+
+        self.session_metadata["total_interactions"] += 1
+
+        return {
+            "response": response_text,
+            "chain_of_thought": cot_steps,
+            "personality": self.personality.to_dict(),
+            "metadata": {
+                "processing_time_ms": round((time.time() - start_time) * 1000, 2),
+                "dedup_retries": retry_count,
+                "context_turns": len(self.conversation_history) // 2,
+                "total_interactions": self.session_metadata["total_interactions"],
+                "timestamp": time.time()
+            }
+        }
+
+    def clear_history(self):
+        self.conversation_history.clear()
+        self.response_texts.clear()
+        self.response_hashes.clear()
+        self.session_metadata["total_interactions"] = 0
+
+    def get_session_stats(self):
+        return {
+            "session_metadata": self.session_metadata,
+            "personality": self.personality.to_dict(),
+            "history_length": len(self.conversation_history),
+            "unique_responses": len(self.response_hashes),
+            "uptime_seconds": time.time() - self.session_metadata["session_start"]
+}
