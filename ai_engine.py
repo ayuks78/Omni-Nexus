@@ -5,8 +5,9 @@ from typing import List, Dict, Optional
 
 from config import NexusConfig
 
-CLAUDE_API_KEY = "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"
-CLAUDE_URL = "https://platform.claude.com/settings/keys"
+CLAUDE_API_KEY = "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"
+CLAUDE_URL = "POST https://api.claude.com/v1/chat/completions
+"
 
 
 class PersonalityMatrix:
