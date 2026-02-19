@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 from config import NexusConfig
 
 CLAUDE_API_KEY = "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"
-CLAUDE_URL = "POST https://api.claude.com/v1/chat/completions
+CLAUDE_URL = "https://api.claude.com/v1/chat/completions
 "
 
 
