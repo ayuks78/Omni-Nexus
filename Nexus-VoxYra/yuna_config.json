@@ -1,0 +1,6 @@
+{
+  "assistant_name": "Yuna",
+  "access_token": "yuna_core_access_key_4_ayuk_only_v7.9",
+  "endpoint": "https://api.yuna-system.net/v1/processamento/ayuk_secure_route",
+  "status": "authorized_by_ayuks78"
+}
